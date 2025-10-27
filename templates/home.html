@@ -1,0 +1,77 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Financial Planner - Welcome</title>
+    <link rel="stylesheet" href="{% static 'styles.css' %}">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <h1 class="nav-brand">Financial Planner</h1>
+            <div class="nav-links">
+                {% if user.is_authenticated %}
+                    <a href="{% url 'dashboard' %}" class="nav-link">Dashboard</a>
+                    <a href="{% url 'profile' %}" class="nav-link">Profile</a>
+                    <form method="post" action="{% url 'logout' %}" class="logout-form">
+                        {% csrf_token %}
+                        <button type="submit" class="logout-btn">Logout</button>
+                    </form>
+                {% else %}
+                    <a href="{% url 'login' %}" class="nav-link">Login</a>
+                    <a href="{% url 'signup' %}" class="nav-link btn-primary">Sign Up</a>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    <main class="main-content">
+        <div class="hero-section">
+            <div class="container">
+                {% if messages %}
+                    <div class="messages">
+                        {% for message in messages %}
+                            <div class="message message-{{ message.tags }}">{{ message }}</div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+
+                {% if user.is_authenticated %}
+                    <script>
+                        // Redirect authenticated users directly to financial dashboard
+                        window.location.href = "{% url 'financial_dashboard' %}";
+                    </script>
+                    <div class="welcome-back">
+                        <h1>Welcome back, {{ user.username }}!</h1>
+                        <p>Redirecting you to your financial dashboard...</p>
+                        <div class="action-buttons">
+                            <a href="{% url 'financial_dashboard' %}" class="btn-primary">Go to Financial Dashboard</a>
+                        </div>
+                    </div>
+                {% else %}
+                    <script>
+                        // Redirect unauthenticated users directly to login page
+                        window.location.href = "{% url 'login' %}";
+                    </script>
+                    <div class="hero-content">
+                        <h1>Welcome to Financial Planner</h1>
+                        <p class="hero-subtitle">Redirecting you to the login page...</p>
+                        <div class="cta-section">
+                            <a href="{% url 'login' %}" class="btn-primary btn-large">Go to Login</a>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2025 Financial Planner. All rights reserved.</p>
+        </div>
+    </footer>
+</body>
+</html>
