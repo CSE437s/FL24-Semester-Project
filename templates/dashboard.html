@@ -1,0 +1,46 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Redirecting to Financial Dashboard - {{ user.username }}</title>
+    <link rel="stylesheet" href="{% static 'styles.css' %}">
+    <script>
+        // Redirect to financial dashboard
+        window.location.href = "{% url 'financial_dashboard' %}";
+    </script>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <h1 class="nav-brand">Financial Planner</h1>
+            <div class="nav-links">
+                <a href="{% url 'financial_dashboard' %}" class="nav-link active">Dashboard</a>
+                <a href="{% url 'personal_info' %}" class="nav-link">Personal Info</a>
+                <a href="{% url 'financial_info' %}" class="nav-link">Financial Info</a>
+                <a href="{% url 'income_timeline' %}" class="nav-link">Income Timeline</a>
+                <a href="{% url 'results' %}" class="nav-link">Results</a>
+                <form method="post" action="{% url 'logout' %}" class="logout-form">
+                    {% csrf_token %}
+                    <button type="submit" class="logout-btn">Logout</button>
+                </form>
+            </div>
+        </div>
+    </nav>
+
+    <main class="main-content">
+        <div class="container">
+            <div class="welcome-section">
+                <h2>Redirecting to Financial Dashboard</h2>
+                <p>You're being redirected to your financial planning dashboard...</p>
+                <div class="action-buttons">
+                    <a href="{% url 'financial_dashboard' %}" class="btn-primary">Go to Financial Dashboard</a>
+                </div>
+            </div>
+
+        </div>
+    </main>
+</body>
+</html>
+
