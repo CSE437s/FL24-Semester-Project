@@ -1,0 +1,580 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Projected Income/Results - {{ user.username }}</title>
+    <link rel="stylesheet" href="{% static 'styles.css' %}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <h1 class="nav-brand">Financial Planner</h1>
+            <div class="nav-links">
+                <a href="{% url 'financial_dashboard' %}" class="nav-link">Dashboard</a>
+                <a href="{% url 'personal_info' %}" class="nav-link">Personal Info</a>
+                <a href="{% url 'financial_info' %}" class="nav-link">Financial Info</a>
+                <a href="{% url 'results' %}" class="nav-link active">Results</a>
+                <form method="post" action="{% url 'logout' %}" class="logout-form">
+                    {% csrf_token %}
+                    <button type="submit" class="logout-btn">Logout</button>
+                </form>
+            </div>
+        </div>
+    </nav>
+
+    <main class="main-content">
+        <div class="container">
+            <div class="page-header">
+                <h2>Your Financial Projection</h2>
+                <p>View your projected income, costs, and savings over time with interactive charts and detailed breakdowns.</p>
+            </div>
+
+            {% if messages %}
+                <div class="messages">
+                    {% for message in messages %}
+                        <div class="message message-{{ message.tags }}">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <!-- Income and Costs Overview -->
+            {% if income_entries %}
+            <div class="results-section">
+                <div class="card form-card">
+                    <div class="card-header">
+                        <h3>Income & Cost Analysis</h3>
+                        <div class="form-toolbar">
+                            <span class="pill">Income vs Costs</span>
+                        </div>
+                    </div>
+                    <div class="card-content">
+                <div class="chart-container">
+                    <canvas id="incomeCostsChart" width="400" height="200"></canvas>
+                </div>
+                <div class="location-legend" id="locationLegend">
+                    <!-- Location legend will be populated by JavaScript -->
+                </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Net Worth Projection -->
+            {% if income_entries %}
+            <div class="results-section">
+                <div class="card form-card">
+                    <div class="card-header">
+                        <h3>Net Worth Projection</h3>
+                        <div class="form-toolbar">
+                            <span class="pill">Investment Growth</span>
+                        </div>
+                    </div>
+                    <div class="card-content">
+                        <div class="chart-container">
+                            <canvas id="netWorthProjectionChart" width="400" height="200"></canvas>
+                        </div>
+                        <p class="chart-description" style="margin-top: 1rem; color: #6b7280; font-size: 0.875rem;">
+                            Shows cumulative net worth assuming your net savings are invested with annual returns. Net worth grows from previous year's value plus returns, then adds that year's net savings.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            {% else %}
+            <div class="results-section">
+                <div class="card form-card">
+                    <div class="card-content">
+                        <div class="empty-state">
+                            <h3>No Financial Data Found</h3>
+                            <p>Please go to the Financial Info page to enter your income and spending preferences, then generate your projection.</p>
+                            <a href="{% url 'financial_info' %}" class="btn-primary">Go to Financial Info</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+                <!-- AI Cost Estimates Section -->
+                {% if ai_cost_estimates %}
+                <div class="card">
+                    <div class="card-header">
+                        <h3>AI-Generated Cost Estimates</h3>
+                        <div class="form-toolbar">
+                            <span class="pill">Location-based Analysis</span>
+                        </div>
+                    </div>
+                    <div class="card-content">
+                        {% for estimate in ai_cost_estimates %}
+                        <div class="cost-estimate-card">
+                            <div class="estimate-header">
+                                <h4>{{ estimate.desired_location }}</h4>
+                                <div class="estimate-meta">
+                                    <span class="badge confidence-{% if estimate.confidence_score >= 0.8 %}5{% elif estimate.confidence_score >= 0.6 %}4{% elif estimate.confidence_score >= 0.4 %}3{% elif estimate.confidence_score >= 0.2 %}2{% else %}1{% endif %}">
+                                        {{ estimate.confidence_score|floatformat:1 }}% confidence
+                                    </span>
+                                    <small>{{ estimate.created_at|date:"M d, Y" }}</small>
+                                </div>
+                            </div>
+                            
+                            <div class="estimate-details">
+                                <div class="detail-row">
+                                    <span class="detail-label">{{ estimate.get_house_type_display }}</span>
+                                    <span class="detail-value">{{ estimate.house_size_sqft }} sq ft</span>
+                                </div>
+                                <div class="detail-row">
+                                    <span class="detail-label">Children</span>
+                                    <span class="detail-value">{{ estimate.number_of_children }}</span>
+                                </div>
+                            </div>
+
+                            <div class="cost-breakdown">
+                                <div class="cost-category">
+                                    <h5>Housing Costs (Annual)</h5>
+                                    <div class="cost-items">
+                                        <div class="cost-item">
+                                            <span>Home Price:</span>
+                                            <span class="money">${{ estimate.estimated_home_price|floatformat:0 }}</span>
+                                        </div>
+                                        <div class="cost-item">
+                                            <span>Monthly Mortgage:</span>
+                                            <span class="money">${{ estimate.estimated_monthly_mortgage|floatformat:0 }}</span>
+                                        </div>
+                                        <div class="cost-item">
+                                            <span>Property Tax:</span>
+                                            <span class="money">${{ estimate.estimated_property_tax_annual|floatformat:0 }}</span>
+                                        </div>
+                                        <div class="cost-item">
+                                            <span>Insurance:</span>
+                                            <span class="money">${{ estimate.estimated_insurance_annual|floatformat:0 }}</span>
+                                        </div>
+                                        <div class="cost-item">
+                                            <span>Utilities:</span>
+                                            <span class="money">${{ estimate.estimated_utilities_monthly|floatformat:0 }}/month</span>
+                                        </div>
+                                        <div class="cost-item">
+                                            <span>Maintenance:</span>
+                                            <span class="money">${{ estimate.estimated_maintenance_annual|floatformat:0 }}</span>
+                                        </div>
+                                    </div>
+                                    {% if estimate.total_housing_costs_annual %}
+                                    <div class="cost-total">
+                                        <strong>Total Housing: ${{ estimate.total_housing_costs_annual|floatformat:0 }}/year</strong>
+                                    </div>
+                                    {% endif %}
+                                </div>
+
+                                {% if estimate.number_of_children > 0 %}
+                                <div class="cost-category">
+                                    <h5>Child Costs (Annual per Child)</h5>
+                                    <div class="cost-items">
+                                        <div class="cost-item">
+                                            <span>Childcare:</span>
+                                            <span class="money">${{ estimate.estimated_childcare_annual|floatformat:0 }}</span>
+                                        </div>
+                                        <div class="cost-item">
+                                            <span>Education:</span>
+                                            <span class="money">${{ estimate.estimated_education_annual|floatformat:0 }}</span>
+                                        </div>
+                                        <div class="cost-item">
+                                            <span>Healthcare:</span>
+                                            <span class="money">${{ estimate.estimated_child_healthcare_annual|floatformat:0 }}</span>
+                                        </div>
+                                        <div class="cost-item">
+                                            <span>Food:</span>
+                                            <span class="money">${{ estimate.estimated_child_food_annual|floatformat:0 }}</span>
+                                        </div>
+                                        <div class="cost-item">
+                                            <span>Clothing:</span>
+                                            <span class="money">${{ estimate.estimated_child_clothing_annual|floatformat:0 }}</span>
+                                        </div>
+                                    </div>
+                                    {% if estimate.total_child_costs_annual %}
+                                    <div class="cost-total">
+                                        <strong>Total Child Costs: ${{ estimate.total_child_costs_annual|floatformat:0 }}/year</strong>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                {% endif %}
+
+                                <div class="cost-category">
+                                    <h5>Lifestyle Costs (Annual)</h5>
+                                    <div class="cost-items">
+                                        <div class="cost-item">
+                                            <span>Transportation:</span>
+                                            <span class="money">${{ estimate.estimated_transportation_annual|floatformat:0 }}</span>
+                                        </div>
+                                        <div class="cost-item">
+                                            <span>Healthcare:</span>
+                                            <span class="money">${{ estimate.estimated_healthcare_annual|floatformat:0 }}</span>
+                                        </div>
+                                        <div class="cost-item">
+                                            <span>Groceries:</span>
+                                            <span class="money">${{ estimate.estimated_groceries_annual|floatformat:0 }}</span>
+                                        </div>
+                                    </div>
+                                    {% if estimate.total_lifestyle_costs_annual %}
+                                    <div class="cost-total">
+                                        <strong>Total Lifestyle: ${{ estimate.total_lifestyle_costs_annual|floatformat:0 }}/year</strong>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="navigation-actions">
+                <div class="action-buttons">
+                    <a href="{% url 'financial_dashboard' %}" class="btn-secondary">Back to Dashboard</a>
+                    <a href="{% url 'financial_info' %}" class="btn-primary">Update Financial Info</a>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        (function(){
+            // Money formatting
+            document.querySelectorAll(".money").forEach(el=>{
+                const raw = parseFloat(el.getAttribute("data-value") || "0");
+                el.textContent = isNaN(raw) ? '$0.00' :
+                    '$' + raw.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            });
+
+        })();
+
+            // Income vs Costs Chart with Location Segments
+            // IMPORTANT: Costs are NOT adjusted by taxes - they are displayed as-is
+            // Costs increase by 3% annually due to inflation
+            {% if income_entries %}
+            const incomeData = [
+                {% for entry in income_entries %}
+                { year: {{ entry.year }}, income: {{ entry.after_tax_income }}, gross_income: {{ entry.income }}, costs: {{ entry.costs|default:0 }}, location: "{{ entry.location }}" },
+                {% endfor %}
+            ];
+
+            const years = incomeData.map(entry => entry.year);
+            const incomes = incomeData.map(entry => entry.income);
+            const costs = incomeData.map(entry => entry.costs);
+            const savings = incomes.map((income, i) => income - costs[i]);
+
+            // Group data by location for separate datasets
+            const locationGroups = {};
+            incomeData.forEach(entry => {
+                if (!locationGroups[entry.location]) {
+                    locationGroups[entry.location] = [];
+                }
+                locationGroups[entry.location].push(entry);
+            });
+
+            // Sort locations by first occurrence
+            const sortedLocations = Object.keys(locationGroups).sort((a, b) => {
+                return Math.min(...locationGroups[a].map(e => e.year)) - Math.min(...locationGroups[b].map(e => e.year));
+            });
+
+            // Create datasets - one for each location
+            const datasets = [];
+            const incomeColor = '#3b82f6'; // Blue for income
+            const costsColor = '#ef4444';  // Red for costs
+
+            sortedLocations.forEach((location, index) => {
+                const group = locationGroups[location];
+                const years = group.map(entry => entry.year);
+                const incomes = group.map(entry => entry.income);
+                const costs = group.map(entry => entry.costs);
+                
+                // Create data arrays with nulls for gaps
+                const incomeDataArray = new Array(incomeData.length).fill(null);
+                const costsDataArray = new Array(incomeData.length).fill(null);
+                
+                group.forEach(entry => {
+                    const dataIndex = incomeData.findIndex(e => e.year === entry.year);
+                    if (dataIndex !== -1) {
+                        incomeDataArray[dataIndex] = entry.income;
+                        costsDataArray[dataIndex] = entry.costs;
+                    }
+                });
+
+                datasets.push({
+                    label: `Income - ${location}`,
+                    data: incomeDataArray,
+                    borderColor: incomeColor,
+                    backgroundColor: incomeColor + '20',
+                    borderWidth: 3,
+                    fill: false,
+                    tension: 0.4,
+                    pointRadius: 4,
+                    pointHoverRadius: 6
+                });
+                
+                datasets.push({
+                    label: `Costs - ${location}`,
+                    data: costsDataArray,
+                    borderColor: costsColor,
+                    backgroundColor: costsColor + '20',
+                    borderWidth: 2,
+                    borderDash: [5, 5],
+                    fill: false,
+                    tension: 0.4,
+                    pointRadius: 4,
+                    pointHoverRadius: 6
+                });
+            });
+
+            if (document.getElementById('incomeCostsChart')) {
+                const ctx = document.getElementById('incomeCostsChart').getContext('2d');
+
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: years,
+                        datasets: datasets
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'top',
+                                labels: {
+                                    filter: function(item) {
+                                        // Only show one legend item per location
+                                        return !item.text.includes('Costs');
+                                    },
+                                    generateLabels: function(chart) {
+                                        const original = Chart.defaults.plugins.legend.labels.generateLabels;
+                                        const labels = original.call(this, chart);
+                                        return labels.filter(label => !label.text.includes('Costs'));
+                                    }
+                                }
+                            },
+                            title: {
+                                display: true,
+                                text: 'After-Tax Income vs Costs Over Time by Location',
+                                font: { size: 16 }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: (context) => {
+                                        const value = Number(context.parsed.y || 0);
+                                        const entry = incomeData[context.dataIndex];
+                                        const location = entry.location;
+                                        
+                                        // If this is a costs dataset, costs are NOT adjusted by taxes
+                                        if (context.dataset.label.includes('Costs')) {
+                                            return context.dataset.label + ': $' + value.toLocaleString(undefined, {maximumFractionDigits: 0}) + ` (${location}, includes 3% annual increase)`;
+                                        } else {
+                                            // Income is after-tax
+                                            const gross = entry.gross_income || value;
+                                            return context.dataset.label + ': $' + value.toLocaleString(undefined, {maximumFractionDigits: 0}) + ` (After Tax, ${location})`;
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                title: { display: true, text: 'Year' },
+                                grid: { display: false }
+                            },
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    callback: (v) => '$' + Number(v).toLocaleString(),
+                                    maxTicksLimit: 8
+                                },
+                                title: { display: true, text: 'Amount ($)' },
+                                grid: { color: 'rgba(0, 0, 0, 0.1)' }
+                            }
+                        },
+                        interaction: {
+                            intersect: false,
+                            mode: 'index'
+                        }
+                    }
+                });
+
+                // Create simple location legend
+                const legendContainer = document.getElementById('locationLegend');
+                if (legendContainer) {
+                    let legendHTML = '<div class="location-legend-content"><h4>Location Timeline:</h4><div class="legend-items">';
+                    sortedLocations.forEach((location, index) => {
+                        const years = locationGroups[location].map(e => e.year).sort((a, b) => a - b);
+                        const yearRange = years.length > 1 ? `${years[0]}-${years[years.length-1]}` : years[0];
+                        legendHTML += `<div class="legend-item">
+                            <span class="legend-text">${location} (${yearRange})</span>
+                        </div>`;
+                    });
+                    legendHTML += '</div><div class="legend-note">Blue lines = After-Tax Income, Red dashed lines = Costs (not adjusted by taxes, increases 3% annually)</div></div>';
+                    legendContainer.innerHTML = legendHTML;
+                }
+            }
+
+            // Net Worth Projection Chart
+            // Calculate net worth series with varying annual returns that maintain target CAGR
+            // Generate random annual returns that have a geometric mean equal to the target CAGR
+            function generateVaryingReturns(numYears, targetCAGR, variationRange = 0.10) {
+                // variationRange: how much the returns can vary (e.g., 0.10 = ±10% variation)
+                const returns = [];
+                
+                // Generate random returns centered around target CAGR with variation
+                // Use normal distribution-like approach with bounds
+                for (let i = 0; i < numYears; i++) {
+                    // Generate random variation (uniform distribution, can adjust for normal distribution)
+                    const variation = (Math.random() - 0.5) * variationRange;
+                    const annualReturn = targetCAGR + variation;
+                    // Ensure returns are reasonable (not too negative)
+                    returns.push(Math.max(annualReturn, -0.30)); // Cap at -30% minimum
+                }
+                
+                // Calculate geometric mean of generated returns
+                const product = returns.reduce((acc, r) => acc * (1 + r), 1);
+                const actualCAGR = Math.pow(product, 1 / numYears) - 1;
+                
+                // Adjust returns to ensure geometric mean equals target CAGR
+                // We need: (1+r1)*(1+r2)*...*(1+rn) = (1+targetCAGR)^n
+                // So: (1+ri_adjusted) = (1+ri) * ((1+targetCAGR)/(1+actualCAGR))
+                const adjustmentFactor = (1 + targetCAGR) / (1 + actualCAGR);
+                const adjustedReturns = returns.map(r => ((1 + r) * adjustmentFactor) - 1);
+                
+                // Verify the geometric mean
+                const adjustedProduct = adjustedReturns.reduce((acc, r) => acc * (1 + r), 1);
+                const verifiedCAGR = Math.pow(adjustedProduct, 1 / numYears) - 1;
+                
+                return adjustedReturns;
+            }
+
+            function calculateNetWorth(savings, targetCAGR) {
+                const netWorthSeries = [];
+                let currentNetWorth = 0;
+                
+                // Generate varying annual returns that maintain the target CAGR
+                const annualReturns = generateVaryingReturns(savings.length, targetCAGR);
+                
+                for (let i = 0; i < savings.length; i++) {
+                    // For first year, just set net worth to net savings
+                    if (i === 0) {
+                        currentNetWorth = savings[i];
+                    } else {
+                        // For subsequent years: grow previous net worth by varying return rate, then add new savings
+                        currentNetWorth = (currentNetWorth * (1 + annualReturns[i])) + savings[i];
+                    }
+                    netWorthSeries.push(currentNetWorth);
+                }
+                
+                return { netWorth: netWorthSeries, returns: annualReturns };
+            }
+
+            const netSavings = savings; // Net savings per year (income - costs)
+            const yearsLabels = years.map(y => String(y));
+
+            // Calculate net worth for each scenario with varying returns
+            const aggressiveResult = calculateNetWorth(netSavings, 0.10); // 10% CAGR
+            const moderateResult = calculateNetWorth(netSavings, 0.07);  // 7% CAGR
+            const conservativeResult = calculateNetWorth(netSavings, 0.04); // 4% CAGR
+            
+            const aggressiveNetWorth = aggressiveResult.netWorth;
+            const moderateNetWorth = moderateResult.netWorth;
+            const conservativeNetWorth = conservativeResult.netWorth;
+
+            if (document.getElementById('netWorthProjectionChart')) {
+                const ctxNW = document.getElementById('netWorthProjectionChart').getContext('2d');
+
+                new Chart(ctxNW, {
+                    type: 'line',
+                    data: {
+                        labels: yearsLabels,
+                        datasets: [
+                            {
+                                label: 'Aggressive (10% annual return)',
+                                data: aggressiveNetWorth,
+                                borderColor: '#10b981', // Green for aggressive
+                                backgroundColor: '#10b98120',
+                                borderWidth: 3,
+                                fill: false,
+                                tension: 0.4,
+                                pointRadius: 4,
+                                pointHoverRadius: 6
+                            },
+                            {
+                                label: 'Moderate (7% annual return)',
+                                data: moderateNetWorth,
+                                borderColor: '#3b82f6', // Blue for moderate
+                                backgroundColor: '#3b82f620',
+                                borderWidth: 3,
+                                fill: false,
+                                tension: 0.4,
+                                pointRadius: 4,
+                                pointHoverRadius: 6
+                            },
+                            {
+                                label: 'Conservative (4% annual return)',
+                                data: conservativeNetWorth,
+                                borderColor: '#f59e0b', // Orange/amber for conservative
+                                backgroundColor: '#f59e0b20',
+                                borderWidth: 3,
+                                fill: false,
+                                tension: 0.4,
+                                pointRadius: 4,
+                                pointHoverRadius: 6
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'top'
+                            },
+                            title: {
+                                display: true,
+                                text: 'Net Worth Projection Over Time',
+                                font: { size: 16 }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: (context) => {
+                                        const value = Number(context.parsed.y || 0);
+                                        return context.dataset.label + ': $' + value.toLocaleString(undefined, {
+                                            maximumFractionDigits: 0,
+                                            minimumFractionDigits: 0
+                                        });
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                title: { display: true, text: 'Year' },
+                                grid: { display: false }
+                            },
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    callback: (v) => '$' + Number(v).toLocaleString(),
+                                    maxTicksLimit: 8
+                                },
+                                title: { display: true, text: 'Net Worth ($)' },
+                                grid: { color: 'rgba(0, 0, 0, 0.1)' }
+                            }
+                        },
+                        interaction: {
+                            intersect: false,
+                            mode: 'index'
+                        }
+                    }
+                });
+            }
+            {% endif %}
+    </script>
+</body>
+</html>

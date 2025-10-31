@@ -1,0 +1,34 @@
+services:
+    db:
+        image: mysql:latest
+        container_name: investments
+        restart: always
+        environment:
+            MYSQL_ROOT_PASSWORD: mypassword
+            MYSQL_USER: myuser
+            MYSQL_PASSWORD: mypassword
+            MYSQL_DATABASE: mydatabase
+        ports: [ '3307:3306' ]
+        healthcheck:
+            test: mysqladmin ping -h 0.0.0.0 -u $$MYSQL_USER --password=$$MYSQL_PASSWORD
+            interval: 5s
+            timeout: 5s
+            retries: 5
+            start_period: 10s
+
+    app:
+        build:
+            context: .
+            dockerfile: ./docker/Dockerfile
+        container_name: investments_app
+        command: python manage.py runserver 0.0.0.0:8000
+        volumes:
+            - ./:/app
+        ports:
+            - "8000:8000"
+        environment:
+            - OPENAI_API_KEY=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
+            - OPENAI_MODEL=gpt-4.5
+        depends_on:
+            db:
+                condition: service_healthy
