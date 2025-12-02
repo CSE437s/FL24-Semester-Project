@@ -1,0 +1,68 @@
+services:
+  frontend:
+    build: ./my-react-app
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+  backend:
+    build: ./backend
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    environment:
+      DATABASE_URL: postgresql://myapp_user:secret@db:5432/myapp_db
+      LLM_BASE_URL: ${LLM_BASE_URL:-http://ollama:11434/v1}
+      LLM_MODEL: ${LLM_MODEL:-llama3}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost}
+      FRONTEND_BASE_URL: ${FRONTEND_BASE_URL:-http://localhost}
+    depends_on:
+      db:
+        condition: service_healthy
+      ollama:
+        condition: service_healthy
+
+  db:
+    image: postgres:16-alpine
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: myapp_user
+      POSTGRES_PASSWORD: secret
+      POSTGRES_DB: myapp_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./db-init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U myapp_user -d myapp_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # Ollama service - optional (can be started separately if needed)
+  # Uncomment to enable Ollama in Docker
+  ollama:
+    image: ollama/ollama:0.12.11
+    container_name: ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ./init-ollama.sh:/init-ollama.sh
+      - ollama_data:/root/.ollama
+    restart: unless-stopped
+    entrypoint: ["sh", "/init-ollama.sh"]
+    healthcheck:
+      test: ["CMD-SHELL", "/bin/ollama list | grep -q 'llama3'"]
+      interval: 10s
+      timeout: 30s
+      retries: 20
+      start_period: 10s
+
+volumes:
+  postgres_data:
+  ollama_data:  # Uncomment if using Ollama service
