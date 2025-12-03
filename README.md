@@ -1,19 +1,55 @@
-# FL2025: Group &lt;Group Number&gt; &lt;Project Name&gt;
+## Local Development
 
-Name your repository using the following format:  
-**SP2025_Group_&lt;Group Number&gt;**  
-(Example: FL2025_Group_9)
+### Prerequisites
+- [Bun](https://bun.sh) v1.2.18+
+- Docker Desktop
+- Supabase CLI (`bunx supabase` works)
 
-## Team Members
-- **&lt;Member Name&gt;**: &lt;Email Address&gt; ; &lt;Github ID&gt;
-- **&lt;Member Name&gt;**: &lt;Email Address&gt; ; &lt;Github ID&gt;
-- **&lt;Member Name&gt;**: &lt;Email Address&gt; ; &lt;Github ID&gt;
+### Quick Start (Standard)
+1. **Setup Environment**
+   Copy `.env.example` to `.env` and add your `OPENAI_API_KEY`.
 
-## TA
-&lt;Name of your group's TA&gt;
+2. **Auto-Start**
+   Runs Supabase, migrations, syncs books, and starts both server/web.
+   ```bash
+   bun run dev:auto
+   ```
+   *Use `bun run dev:auto:reset` to wipe the database first.*
 
-## Objectives
-&lt;Description of what your project is about, your key functionalities, tech stacks used, etc. &gt;
+### Kubernetes Deployment (Local)
+The provided manifests in `k8s/` mount your local code for development.
 
-## How to Run
-&lt;Instructions for how to run your project. Include the URI to your project at the top if applicable.&gt;
+1. **Deploy**
+   Ensure your local cluster (e.g. Docker Desktop) is running.
+   ```bash
+   kubectl apply -f k8s/
+   ```
+
+2. **Access**
+   - Frontend: `http://localhost:30080` (NodePort)
+   - Database: `http://localhost:5432` (if port forwarded)
+
+### Manual Commands
+If you prefer running services individually:
+
+**Backend**
+```bash
+bun run supabase:start      # Start DB
+bunx supabase migration up  # Apply migrations locally
+bun run supabase:sync-epubs # Sync books & keys
+bun run server              # Start API
+```
+
+**Frontend**
+```bash
+bun run web                 # Start Web
+# OR
+bun run ios                 # Start iOS
+```
+
+### Windows Troubleshooting
+If you encounter "Filename too long" errors:
+```bash
+git config --global core.longpaths true
+```
+Then re-clone or pull.
